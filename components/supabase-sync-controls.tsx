@@ -1,129 +1,130 @@
 "use client"
 
-import * as React from "react"
-import { useToast } from "@/hooks/use-toast"
-import { Loader2, Save, Download, Database } from "lucide-react"
-import { FuturisticButton } from "@/components/futuristic-button"
-import { useAppStore } from "@/lib/store"
+import { useState } from "react"
+import { Database, Save, Upload, Loader2 } from "lucide-react"
+import { FuturisticButton } from "./futuristic-button"
+import { useStore } from "@/lib/store"
 
-export default function SupabaseSyncControls() {
-  const { toast } = useToast()
-  const [loading, setLoading] = React.useState<"save" | "load" | "health" | null>(null)
+export function SupabaseSyncControls() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [status, setStatus] = useState<string>("")
+  const store = useStore()
 
-  // Get the entire store state and setState function
-  const storeState = useAppStore((state) => state)
-  const setState = useAppStore.setState
+  const testConnection = async () => {
+    setIsLoading(true)
+    setStatus("Testing connection...")
 
-  async function handleHealthCheck() {
     try {
-      setLoading("health")
-      const res = await fetch("/api/supabase/health")
-      const json = await res.json()
+      const response = await fetch("/api/supabase/health")
+      const result = await response.json()
 
-      if (json.ok) {
-        toast({
-          title: "✅ Supabase Connected",
-          description: json.message || "Connection successful",
-        })
+      if (result.ok) {
+        setStatus("✅ Connected to Supabase!")
       } else {
-        toast({
-          title: "❌ Connection Failed",
-          description: json.error || "Unknown error",
-          variant: "destructive",
-        })
+        setStatus(`❌ Connection failed: ${result.error}`)
       }
-    } catch (err: any) {
-      toast({
-        title: "❌ Health Check Failed",
-        description: err?.message || "Network error",
-        variant: "destructive",
-      })
+    } catch (error) {
+      setStatus(`❌ Connection error: ${error}`)
     } finally {
-      setLoading(null)
+      setIsLoading(false)
+      setTimeout(() => setStatus(""), 3000)
     }
   }
 
-  async function handleSave() {
-    try {
-      setLoading("save")
+  const saveState = async () => {
+    setIsLoading(true)
+    setStatus("Saving to Supabase...")
 
-      const res = await fetch("/api/state", {
+    try {
+      const appState = {
+        // Renamed from 'state' to 'appState'
+        databases: store.databases,
+        currentDatabase: store.currentDatabase,
+        forms: store.forms,
+        currentForm: store.currentForm,
+        elements: store.elements,
+        selectedElement: store.selectedElement,
+        theme: store.theme,
+      }
+
+      const response = await fetch("/api/state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: storeState }),
+        body: JSON.stringify({ appState }), // Sending 'appState'
       })
 
-      const json = await res.json()
+      const result = await response.json()
 
-      if (json.ok) {
-        toast({
-          title: "💾 Saved to Supabase",
-          description: "Your form builder state has been saved",
-        })
+      if (result.success) {
+        setStatus("✅ Saved to Supabase!")
       } else {
-        throw new Error(json.error || "Save failed")
+        setStatus(`❌ Save failed: ${result.error}`)
       }
-    } catch (err: any) {
-      toast({
-        title: "❌ Save Failed",
-        description: err?.message || "Unknown error",
-        variant: "destructive",
-      })
+    } catch (error) {
+      setStatus(`❌ Save error: ${error}`)
     } finally {
-      setLoading(null)
+      setIsLoading(false)
+      setTimeout(() => setStatus(""), 3000)
     }
   }
 
-  async function handleLoad() {
+  const loadState = async () => {
+    setIsLoading(true)
+    setStatus("Loading from Supabase...")
+
     try {
-      setLoading("load")
+      const response = await fetch("/api/state")
+      const result = await response.json()
 
-      const res = await fetch("/api/state")
-      const json = await res.json()
+      if (result.appState) {
+        // Expecting 'appState' from response
+        // Update the store with loaded state
+        if (result.appState.databases) store.setDatabases(result.appState.databases)
+        if (result.appState.currentDatabase) store.setCurrentDatabase(result.appState.currentDatabase)
+        if (result.appState.forms) store.setForms(result.appState.forms)
+        if (result.appState.currentForm) store.setCurrentForm(result.appState.currentForm)
+        if (result.appState.elements) store.setElements(result.appState.elements)
+        if (result.appState.selectedElement) store.setSelectedElement(result.appState.selectedElement)
+        if (result.appState.theme) store.setTheme(result.appState.theme)
 
-      if (json.ok) {
-        if (json.data) {
-          // Replace the entire store state
-          setState(json.data, true)
-          toast({
-            title: "📥 Loaded from Supabase",
-            description: `State restored from ${new Date(json.lastUpdated).toLocaleString()}`,
-          })
-        } else {
-          toast({
-            title: "📭 No Saved State",
-            description: "No previous state found in Supabase",
-          })
-        }
+        setStatus("✅ Loaded from Supabase!")
       } else {
-        throw new Error(json.error || "Load failed")
+        setStatus("ℹ️ No saved state found")
       }
-    } catch (err: any) {
-      toast({
-        title: "❌ Load Failed",
-        description: err?.message || "Unknown error",
-        variant: "destructive",
-      })
+    } catch (error) {
+      setStatus(`❌ Load error: ${error}`)
     } finally {
-      setLoading(null)
+      setIsLoading(false)
+      setTimeout(() => setStatus(""), 3000)
     }
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 backdrop-blur-md bg-white/5 border border-white/10 rounded-xl shadow-lg p-3 flex items-center gap-2">
-      <FuturisticButton onClick={handleHealthCheck} disabled={loading !== null} size="sm">
-        {loading === "health" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-      </FuturisticButton>
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div className="flex gap-2">
+        <FuturisticButton
+          onClick={testConnection}
+          disabled={isLoading}
+          className="p-2"
+          title="Test Supabase Connection"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+        </FuturisticButton>
 
-      <FuturisticButton onClick={handleLoad} disabled={loading !== null} size="sm">
-        {loading === "load" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-        Load
-      </FuturisticButton>
+        <FuturisticButton onClick={saveState} disabled={isLoading} className="p-2" title="Save to Supabase">
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        </FuturisticButton>
 
-      <FuturisticButton onClick={handleSave} disabled={loading !== null} size="sm">
-        {loading === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-        Save
-      </FuturisticButton>
+        <FuturisticButton onClick={loadState} disabled={isLoading} className="p-2" title="Load from Supabase">
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        </FuturisticButton>
+      </div>
+
+      {status && (
+        <div className="bg-black/80 backdrop-blur-sm border border-cyan-500/30 rounded-lg px-3 py-2 text-sm text-cyan-300 max-w-xs">
+          {status}
+        </div>
+      )}
     </div>
   )
 }

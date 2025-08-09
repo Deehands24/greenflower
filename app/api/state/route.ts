@@ -1,88 +1,46 @@
-import { NextResponse } from "next/server"
-import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { type NextRequest, NextResponse } from "next/server"
+import { supabaseServer } from "@/lib/supabase/server"
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const projectId = searchParams.get("project") || process.env.NEXT_PUBLIC_STACK_PROJECT_ID || "default"
-
+export async function GET() {
   try {
-    const supabase = getSupabaseServerClient()
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("project_id, state, updated_at")
-      .eq("project_id", projectId)
-      .maybeSingle()
+    const { data, error } = await supabaseServer.from("app_state").select("app_state_data").eq("id", "main").single()
 
     if (error) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 500 },
-      )
+      if (error.code === "PGRST116") {
+        // No data found, return empty state
+        return NextResponse.json({ appState: null })
+      }
+      throw error
     }
 
-    return NextResponse.json({
-      ok: true,
-      data: data?.state || null,
-      lastUpdated: data?.updated_at || null,
-    })
-  } catch (e: any) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: e?.message ?? "Failed to load state",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ appState: data.app_state_data })
+  } catch (error: any) {
+    console.error("Failed to load state:", error)
+    return NextResponse.json({ error: "Failed to load state: " + error.message }, { status: 500 })
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const projectId = body.project || process.env.NEXT_PUBLIC_STACK_PROJECT_ID || "default"
-    const state = body.state
+    const { appState } = await request.json() // Renamed from 'state' to 'appState'
 
-    if (!state) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Missing 'state' in request body",
-        },
-        { status: 400 },
-      )
+    if (!appState) {
+      return NextResponse.json({ success: false, error: "App state is required" }, { status: 400 })
     }
 
-    const supabase = getSupabaseServerClient()
-    const { error } = await supabase.from("app_state").upsert({
-      project_id: projectId,
-      state: state,
+    const { error } = await supabaseServer.from("app_state").upsert({
+      id: "main",
+      app_state_data: appState, // Column name in DB
       updated_at: new Date().toISOString(),
     })
 
     if (error) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-        },
-        { status: 500 },
-      )
+      throw error
     }
 
-    return NextResponse.json({
-      ok: true,
-      message: "State saved successfully",
-    })
-  } catch (e: any) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: e?.message ?? "Failed to save state",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error("Failed to save state:", error)
+    return NextResponse.json({ error: "Failed to save state: " + error.message }, { status: 500 })
   }
 }
