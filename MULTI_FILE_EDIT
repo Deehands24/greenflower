@@ -1,0 +1,129 @@
+// app/layout.tsx
+import type React from "react"
+import "@/app/globals.css"
+import "@/app/futuristic.css"
+import "@/app/futuristic-additions.css"
+import { FuturisticThemeProvider } from "@/components/futuristic-theme-provider"
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning className="h-full">
+      <body className="h-full min-h-screen">
+        <FuturisticThemeProvider>{children}</FuturisticThemeProvider>
+      </body>
+    </html>
+  )
+}
+
+// app/page.tsx
+import Dashboard from "@/components/dashboard"
+
+export default function Home() {
+  return (
+    <main className="relative min-h-screen flex">
+      {/* Futuristic background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Grey gradient backdrop */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-800 to-gray-900"></div>
+
+        {/* Subtle light effects */}
+        <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-gray-500/10 blur-3xl"></div>
+        <div className="absolute bottom-10 right-10 w-60 h-60 rounded-full bg-gray-400/10 blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-gray-600/5 blur-3xl"></div>
+
+        {/* Grid lines */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(200,200,200,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(200,200,200,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+
+        {/* Checker pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(200,200,200,0.03)_25%,transparent_25%,transparent_75%,rgba(200,200,200,0.03)_75%)] bg-[size:20px_20px]"></div>
+      </div>
+
+      {/* Foreground app */}
+      <div className="relative z-10 flex-1">
+        <Dashboard />
+      </div>
+    </main>
+  )
+}
+
+// components/ui/dialog.tsx
+import { cn } from "@/lib/utils"
+import { DialogProps } from "@radix-ui/react-dialog"
+import { motion } from "framer-motion"
+import { forwardRef } from "react"
+import { DialogContent } from "@radix-ui/react-dialog"
+
+const Dialog = forwardRef<HTMLDivElement, DialogProps>((props, ref) => {
+  return (
+    <motion.div
+      ref={ref}
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+      {...props}
+    />
+  )
+})
+
+Dialog.displayName = "Dialog"
+
+const DialogContent = forwardRef<HTMLDivElement, DialogProps>((props, ref) => {
+  return (
+    <DialogContent
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[30%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[85vh] overflow-y-auto",
+        props.className
+      )}
+      {...props}
+    />
+  )
+})
+
+DialogContent.displayName = "DialogContent"
+
+export { Dialog, DialogContent }
+
+// components/new-database-dialog.tsx
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
+import { Cross2Icon } from "@radix-ui/react-icons"
+
+export function NewDatabaseDialog({ open, onOpenChange }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Backdrop */}
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+      </Dialog.Portal>
+
+      {/* Dialog content wrapper */}
+      <DialogContent className="fixed left-[50%] top-[35%] z-50 w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-gray-700/50 bg-gray-800/90 p-6 shadow-lg duration-200 animate-in fade-in-0 zoom-in-95 sm:rounded-lg glass-card" style={{ maxHeight: "calc(100vh - 40px)", overflowY: "auto" }}>
+        {/* Dialog content here */}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// components/dashboard.tsx
+import { SidebarInset } from "@/components/ui/sidebar-inset"
+import { FuturisticCard } from "@/components/ui/futuristic-card"
+
+export function Dashboard() {
+  return (
+    <SidebarInset>
+      <div className="max-w-7xl mx-auto py-6 px-4 space-y-6 h-full overflow-y-auto">
+        {/* Dashboard sections here */}
+        <FuturisticCard title="Section 1">
+          {/* Content for Section 1 */}
+        </FuturisticCard>
+        <FuturisticCard title="Section 2">
+          {/* Content for Section 2 */}
+        </FuturisticCard>
+        {/* Additional sections */}
+      </div>
+    </SidebarInset>
+  )
+}
